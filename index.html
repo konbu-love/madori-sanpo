@@ -234,19 +234,26 @@ function stairGeom(s){
   else { leg1(12,SH/13); holes=[{x:0,y:0,w:Wd,h:6}]; path=[[Wd/2,5.7],[Wd/2,0.3]]; }
   /* 上の階へ出る辺(幅か奥行きが0の四角で表す) */
   let exit=s.t==='L'?{x:W,y:0,w:0,h:Wd}:s.t==='U'?{x:Wd,y:H,w:Wd,h:0}:s.t==='ladder'?null:{x:0,y:0,w:Wd,h:0};
-  for(let k=0;k<(s.r||0);k++){ tr=tr.map(q=>rotR(q,H)); holes=holes.map(q=>rotR(q,H)); if(exit) exit=rotR(exit,H); path=path.map(([x,y])=>[H-y,x]); const t=W; W=H; H=t; }
+  let entry=s.t==='ladder'?null:{x:0,y:H,w:Wd,h:0};   // 上り口の辺
+  for(let k=0;k<(s.r||0);k++){ tr=tr.map(q=>rotR(q,H)); holes=holes.map(q=>rotR(q,H)); if(exit) exit=rotR(exit,H); if(entry) entry=rotR(entry,H); path=path.map(([x,y])=>[H-y,x]); const t=W; W=H; H=t; }
   const mv=q=>({...q,x:q.x+s.x,y:q.y+s.y});
-  return {W,H,treads:tr.map(mv),holes:holes.map(mv),exit:exit?mv(exit):null,path:path.map(([x,y])=>[x+s.x,y+s.y])};
+  return {W,H,treads:tr.map(mv),holes:holes.map(mv),exit:exit?mv(exit):null,entry:entry?mv(entry):null,path:path.map(([x,y])=>[x+s.x,y+s.y])};
 }
-/* 上の階の、階段の穴のまわりに付く手すり。出口の辺だけ空ける */
-function stairRails(s){
+/* 同じ場所・同じ形・同じ幅・同じ向きの階段か(上下に重ねると、中間の階で上りも下りもできる) */
+const sameStair=(a,b)=>a.t!=='ladder'&&a.t===b.t&&(a.w||2)===(b.w||2)&&a.x===b.x&&a.y===b.y&&((a.r||0)%4)===((b.r||0)%4);
+const stackedOn=(fi,s)=>fi>0&&s.t!=='ladder'&&plan.floors[fi-1].stairs.some(t=>sameStair(t,s));
+const treadBot=q=>Math.max(0,q.top-0.35);   // 重ねた階段の段の板の下面
+/* 上の階の、階段の穴のまわりに付く手すり。出口の辺だけ空ける。
+   上の階に同じ階段が重なっているときは、その上り口の辺も空ける */
+function stairRails(s,upper){
   if(s.t==='ladder'||s.noRail) return [];
-  const g=stairGeom(s), out=[], ex=g.exit, E=1e-6;
+  const g=stairGeom(s), out=[], E=1e-6;
+  const opens=[g.exit]; if(upper&&upper.stairs.some(u=>sameStair(u,s))) opens.push(g.entry);
   const cut=(a,b,ivs)=>{ let sg=[[a,b]]; for(const [c,d] of ivs){ const nx=[]; for(const [p,q] of sg){ if(d<=p||c>=q){ nx.push([p,q]); continue; } if(c>p) nx.push([p,c]); if(d<q) nx.push([d,q]); } sg=nx; } return sg.filter(([p,q])=>q-p>0.01); };
   for(const r of g.holes) for(const [o,line,a,b] of [['h',r.y,r.x,r.x+r.w],['h',r.y+r.h,r.x,r.x+r.w],['v',r.x,r.y,r.y+r.h],['v',r.x+r.w,r.y,r.y+r.h]]){
     const ivs=[];
     for(const q of g.holes){ if(q===r) continue; if(o==='h'){ if(line>=q.y-E&&line<=q.y+q.h+E) ivs.push([q.x,q.x+q.w]); } else if(line>=q.x-E&&line<=q.x+q.w+E) ivs.push([q.y,q.y+q.h]); }
-    if(ex){ if(o==='h'&&ex.h<E&&Math.abs(ex.y-line)<E) ivs.push([ex.x,ex.x+ex.w]); if(o==='v'&&ex.w<E&&Math.abs(ex.x-line)<E) ivs.push([ex.y,ex.y+ex.h]); }
+    for(const ex of opens){ if(!ex) continue; if(o==='h'&&ex.h<E&&Math.abs(ex.y-line)<E) ivs.push([ex.x,ex.x+ex.w]); if(o==='v'&&ex.w<E&&Math.abs(ex.x-line)<E) ivs.push([ex.y,ex.y+ex.h]); }
     for(const [p,q] of cut(a,b,ivs)) out.push(o==='h'?[p,line,q,line]:[line,p,line,q]);
   }
   return out;
@@ -490,14 +497,14 @@ function drawPlat2d(p,s){
   if(p.w*s>fs*4.2 && p.h*s>fs*1.6){ ctx.fillStyle='#6b4423'; ctx.font=`700 ${fs}px sans-serif`; ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText(NAME[p.k],p.x*s+5,p.y*s+5); }
   ctx.restore();
 }
-function drawStair2d(st,s,ghost){
+function drawStair2d(st,s,ghost,upper){
   const g=stairGeom(st);
   ctx.save(); ctx.lineWidth=1;
   if(ghost){ ctx.fillStyle='#f6f6f1'; for(const h of g.holes) ctx.fillRect(h.x*s,h.y*s,h.w*s,h.h*s); ctx.strokeStyle='rgba(60,60,70,.4)'; ctx.setLineDash([4,3]); }
   else { ctx.fillStyle='rgba(255,250,238,.94)'; for(const q of g.treads) ctx.fillRect(q.x*s,q.y*s,q.w*s,q.h*s); ctx.strokeStyle='#5a4632'; }
   for(const q of g.treads) ctx.strokeRect(q.x*s,q.y*s,q.w*s,q.h*s);
   ctx.setLineDash([]);
-  if(ghost){ ctx.strokeStyle='#8a5a34'; ctx.lineWidth=3; ctx.beginPath(); for(const [x1,y1,x2,y2] of stairRails(st)){ ctx.moveTo(x1*s,y1*s); ctx.lineTo(x2*s,y2*s); } ctx.stroke(); }
+  if(ghost){ ctx.strokeStyle='#8a5a34'; ctx.lineWidth=3; ctx.beginPath(); for(const [x1,y1,x2,y2] of stairRails(st,upper)){ ctx.moveTo(x1*s,y1*s); ctx.lineTo(x2*s,y2*s); } ctx.stroke(); }
   ctx.strokeStyle=ctx.fillStyle=ghost?'rgba(60,60,70,.5)':'#c4533b'; ctx.lineWidth=2; ctx.lineJoin='round';
   ctx.beginPath(); g.path.forEach(([x,y],i)=>i?ctx.lineTo(x*s,y*s):ctx.moveTo(x*s,y*s)); ctx.stroke();
   const n=g.path.length, [ax,ay]=g.path[n-2], [bx,by]=g.path[n-1], an=Math.atan2(by-ay,bx-ax), hs=Math.max(6,s*0.38);
@@ -526,7 +533,7 @@ function draw2d(){
   ctx.save(); ctx.translate(view.ox,view.oy);
   ctx.fillStyle='#fffdf8'; ctx.fillRect(0,0,GW*s,GH*s);
   for(const r of P.rooms) drawFloor2d(r,s);
-  if(cur>0) for(const st of plan.floors[cur-1].stairs) if(st.t!=='ladder') drawStair2d(st,s,true);   // 下の階から上がってくる階段の穴
+  if(cur>0) for(const st of plan.floors[cur-1].stairs) if(st.t!=='ladder') drawStair2d(st,s,true,P);   // 下の階から上がってくる階段の穴
   for(const p of P.plats) drawPlat2d(p,s);
 
   const grid=(step,col)=>{
@@ -1107,7 +1114,7 @@ function buildMesh(){
     if(bs) for(const r of plan.floors[0].rooms) gr=subRects(gr,r);
     for(const q of gr) rectQ('grass',q,-0.04,0,0,4,W1,4);
   }
-  world=plan.floors.map(fl=>{ const sg=fl.stairs.map(stairGeom); return {solids:[].concat(...fl.fix.map(f=>fixGeom(f).parts.filter(q=>q.t-q.b>0.1&&q.b<1.5))),rooms:fl.rooms,plats:fl.plats,treads:[].concat(...sg.map(g=>g.treads)),holesUp:[].concat(...sg.map(g=>g.holes))}; });
+  world=plan.floors.map((fl,fi)=>{ const sg=fl.stairs.map(s=>{ const g=stairGeom(s), st=stackedOn(fi,s); g.treads.forEach(q=>q.b=st?treadBot(q):0); return g; }); return {solids:[].concat(...fl.fix.map(f=>fixGeom(f).parts.filter(q=>q.t-q.b>0.1&&q.b<1.5))),rooms:fl.rooms,plats:fl.plats,treads:[].concat(...sg.map(g=>g.treads)),holesUp:[].concat(...sg.map(g=>g.holes))}; });
   segsF=[]; doors=[];
   for(let fi=0;fi<=top;fi++){
     P=plan.floors[fi]; st.yb=Y(fi); st.fl='';
@@ -1137,8 +1144,13 @@ function buildMesh(){
       if(loft){ rectQ('white',p,h-0.25,p.x,p.y,2,[0.82,0.80,0.76,1]); box(p,h-0.25,h,WOOD); } else box(p,0,h,WOOD);
     }
     for(const s of P.stairs){
-      const g=stairGeom(s); LIT(roomAt(s.x+g.W/2,s.y+g.H/2));
-      for(const q of g.treads){ if(wallH<H_WALL && q.top>wallH) continue; rectQ('wood',q,q.top,s.x,s.y,2,[0.95,0.90,0.82,1]); box(q,0,q.top,[0.88,0.76,0.60]); }
+      const g=stairGeom(s), stk=stackedOn(fi,s); LIT(roomAt(s.x+g.W/2,s.y+g.H/2));
+      for(const q of g.treads){
+        if(wallH<H_WALL && q.top>wallH) continue;
+        const b0=stk?treadBot(q):0;   // 下の階の階段と重なるときは、下をくぐれるように段だけの板にする
+        rectQ('wood',q,q.top,s.x,s.y,2,[0.95,0.90,0.82,1]); box(q,b0,q.top,[0.88,0.76,0.60]);
+        if(b0>0) rectQ('white',q,b0,s.x,s.y,2,[0.70,0.60,0.48,1]);
+      }
     }
     for(const f of P.fix){
       const g=fixGeom(f), lit=litRooms.has(roomAt(f.x+g.W/2,f.y+g.H/2));
@@ -1176,7 +1188,7 @@ function buildMesh(){
     };
     const anyLit=u=>litRooms.has(sideRoom(u,u.a,1))||litRooms.has(sideRoom(u,u.a,-1));
     const sg=[]; segsF[fi]=sg;
-    if(fi>0) for(const s of plan.floors[fi-1].stairs) for(const [x1,z1,x2,z2] of stairRails(s)){
+    if(fi>0) for(const s of plan.floors[fi-1].stairs) for(const [x1,z1,x2,z2] of stairRails(s,P)){
       const mx=(x1+x2)/2, mz=(z1+z2)/2, dx=x1===x2?0.2:0, dz=x1===x2?0:0.2;
       if(!roomAt(mx+dx,mz+dz) && !roomAt(mx-dx,mz-dz)) continue;     // まわりに床がなければ付けない
       const y1=Math.min(H_KOSHI,wallH); st.fl='';
@@ -1341,7 +1353,7 @@ function groundAt(x,z,y){
 function blockedAt(x,z,y){
   for(let fi=0;fi<world.length;fi++){
     const w=world[fi], b=Y(fi);
-    for(const q of w.treads) if(b+q.top>y+STEP && b<y+4.4 && inRect(q,x,z)) return true;
+    for(const q of w.treads) if(b+q.top>y+STEP && b+(q.b||0)<y+4.4 && inRect(q,x,z)) return true;
     for(const q of w.solids) if(b+q.t>y+STEP && b+q.b<y+4.4 && inRect(q,x,z)) return true;
     for(const p of w.plats){ if(p.k!=='loft') continue; const t=b+H_LOFT; if(t>y+STEP && t-0.25<y+3.63 && inRect(p,x,z)) return true; }
   }
