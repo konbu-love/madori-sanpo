@@ -316,6 +316,87 @@ const FIX={
     danro:{n:'暖炉',w:3.2,d:1.1,light:2,p:[[0,0,3.2,1.0,0,CM(120),BRICK],[0.8,1.0,1.6,0.02,CM(8),CM(78),[0.07,0.07,0.07]],[1.1,1.02,1.0,0.02,CM(10),CM(46),FIRE,1],[1.25,1.03,0.7,0.02,CM(10),CM(30),[1.0,0.85,0.35],1],[0,0,3.2,1.1,CM(120),CM(128),DW],[0.8,0,1.6,0.8,CM(128),H_WALL,BRICK]]}
   });
 })();
+/* ---------- どうぶつ ----------
+   顔は y の大きい側(手前)を向く。big は天井につかえるので、庭か吹き抜けにだけ置ける */
+(function(){
+  const DK=[0.12,0.10,0.09], WH=[0.96,0.93,0.86];
+  const sc=(d,k,extra)=>({...d,w:d.w*k,d:d.d*k,p:d.p.map(([x,y,w,h,b,t,c,e])=>[x*k,y*k,w*k,h*k,b*k,t*k,c,e]).concat(extra||[])});
+  /* 柴犬 */
+  const SB=[0.82,0.52,0.26];
+  const dog={n:'犬(柴犬)',w:0.8,d:1.85,p:[
+    ...[[0.08,0.3],[0.57,0.3],[0.08,1.0],[0.57,1.0]].map(([x,y])=>[x,y,0.15,0.15,0,CM(25),SB]),
+    [0.05,0.25,0.7,0.95,CM(22),CM(42),SB],[0.2,0.9,0.4,0.25,CM(20),CM(36),WH],
+    [0.1,1.1,0.6,0.5,CM(34),CM(58),SB],[0.22,1.6,0.36,0.2,CM(36),CM(47),WH],[0.33,1.8,0.14,0.03,CM(42),CM(46),DK],
+    [0.18,1.6,0.1,0.02,CM(49),CM(53),DK],[0.52,1.6,0.1,0.02,CM(49),CM(53),DK],
+    [0.12,1.25,0.15,0.13,CM(58),CM(67),SB],[0.53,1.25,0.15,0.13,CM(58),CM(67),SB],
+    [0.3,0.12,0.2,0.28,CM(40),CM(56),SB],[0.3,0.12,0.2,0.12,CM(56),CM(60),WH]]};
+  /* 犬小屋。入口は手前 */
+  const HW=[0.86,0.74,0.56], RF=[0.70,0.24,0.20];
+  const dogh={n:'犬小屋',w:2,d:2.2,p:[
+    [0,0,2,2.2,0,CM(5),[0.42,0.29,0.20]],[0.15,0.15,1.7,1.9,CM(5),CM(6),[0.22,0.17,0.13]],
+    [0,0,0.15,2.2,0,CM(72),HW],[1.85,0,0.15,2.2,0,CM(72),HW],[0.15,0,1.7,0.15,0,CM(72),HW],
+    [0.15,2.05,0.45,0.15,0,CM(72),HW],[1.4,2.05,0.45,0.15,0,CM(72),HW],[0.6,2.05,0.8,0.15,CM(48),CM(72),HW],
+    [0,0,2,2.2,CM(72),CM(80),RF],[0.25,0,1.5,2.2,CM(80),CM(90),RF],[0.55,0,0.9,2.2,CM(90),CM(99),RF],[0.82,0,0.36,2.2,CM(99),CM(105),RF],
+    [0.75,2.2,0.5,0.02,CM(52),CM(62),[0.95,0.92,0.82]]]};
+  /* 猫(箱座り) */
+  const CG=[0.60,0.60,0.62];
+  const cat={n:'猫',w:0.6,d:0.95,p:[
+    [0,0,0.6,0.14,0,CM(7),CG],[0.05,0.1,0.5,0.55,0,CM(21),CG],
+    [0.08,0.55,0.44,0.38,CM(13),CM(32),CG],[0.18,0.93,0.24,0.02,CM(14),CM(21),WH],
+    [0.13,0.93,0.08,0.02,CM(24),CM(28),[0.35,0.55,0.25]],[0.39,0.93,0.08,0.02,CM(24),CM(28),[0.35,0.55,0.25]],
+    [0.1,0.62,0.12,0.12,CM(32),CM(38),CG],[0.38,0.62,0.12,0.12,CM(32),CM(38),CG]]};
+  /* キャットタワー */
+  const CP=[0.88,0.82,0.70], SI=[0.80,0.68,0.46];
+  const ctw={n:'キャットタワー',w:1.4,d:1.4,p:[
+    [0,0,1.4,1.4,0,CM(6),CP],[0.25,0.25,0.22,0.22,CM(6),CM(150),SI],[0.95,0.95,0.22,0.22,CM(6),CM(65),SI],
+    [0,0,0.8,0.8,CM(60),CM(65),CP],[0.6,0.6,0.8,0.8,CM(65),CM(100),CP],[0.8,1.4,0.4,0.01,CM(70),CM(92),[0.22,0.17,0.13]],
+    [0.6,0.6,0.8,0.8,CM(100),CM(104),CP],[0,0,0.8,0.8,CM(146),CM(152),CP]]};
+  /* 象。脚のあいだはくぐれないように、胴の下に見えない当たりを置く */
+  const EG=[0.60,0.59,0.58], EG2=[0.52,0.51,0.50];
+  const zou={n:'象(庭・吹き抜け)',big:1,w:3.2,d:7.9,p:[
+    ...[[0.35,1.2],[1.95,1.2],[0.35,4.4],[1.95,4.4]].map(([x,y])=>[x,y,0.9,0.9,0,CM(150),EG2]),
+    [0.2,0.8,2.8,4.8,CM(130),CM(270),EG],[0.6,5.4,2.0,1.7,CM(165),CM(290),EG],
+    [0.05,5.5,0.55,0.25,CM(160),CM(275),EG2],[2.6,5.5,0.55,0.25,CM(160),CM(275),EG2],
+    [1.25,7.1,0.7,0.45,CM(120),CM(215),EG],[1.3,7.25,0.6,0.4,CM(40),CM(125),EG],[1.3,7.5,0.6,0.4,CM(15),CM(55),EG],
+    [0.8,7.1,0.18,0.02,CM(235),CM(250),DK],[2.22,7.1,0.18,0.02,CM(235),CM(250),DK],
+    [1.0,7.1,0.18,0.35,CM(150),CM(168),WH],[2.02,7.1,0.18,0.35,CM(150),CM(168),WH],
+    [1.5,0.5,0.2,0.3,CM(160),CM(240),EG2]]};
+  const zouHit=[[0.2,0.8,2.8,6.3,0,CM(140),null]];
+  /* キリン。大人は胴の下を歩いてくぐれる */
+  const KY=[0.93,0.76,0.42], KB=[0.58,0.35,0.17], KH=[0.25,0.18,0.12];
+  const neck=[0,1,2,3,4,5].map(i=>[0.7,4.4+0.3*i,0.8,0.7,CM(255+25*i),CM(310+25*i),KY]);
+  const kirin={n:'キリン(庭・吹き抜け)',big:1,w:2.2,d:7,p:[
+    ...[[0.45,0.9],[1.35,0.9],[0.45,4.4],[1.35,4.4]].flatMap(([x,y])=>[[x,y,0.4,0.4,0,CM(12),KH],[x,y,0.4,0.4,CM(12),CM(210),KY]]),
+    [0.3,0.6,1.6,4.6,CM(200),CM(280),KY],
+    ...[[0.8,0.8],[2.0,0.9],[3.3,0.8],[4.4,0.6]].map(([y,d],i)=>[0.28,y,0.03,d,CM(215+12*(i%2)),CM(250+12*(i%2)),KB]),
+    ...[[1.0,0.8],[2.2,0.9],[3.5,0.8]].map(([y,d],i)=>[1.89,y,0.03,d,CM(225-10*(i%2)),CM(258-10*(i%2)),KB]),
+    ...[[0.5,0.9,0.7,0.7],[1.1,2.3,0.6,0.8],[0.45,3.6,0.6,0.7],[1.1,4.2,0.5,0.6]].map(([x,y,w,d])=>[x,y,w,d,CM(280),CM(281),KB]),
+    ...neck,[1.0,4.3,0.2,1.9,CM(300),CM(395),KH],
+    [0.75,5.6,0.7,1.4,CM(385),CM(430),KY],[0.85,6.8,0.5,0.2,CM(380),CM(412),[0.80,0.62,0.36]],
+    [0.73,6.2,0.02,0.15,CM(410),CM(418),DK],[1.45,6.2,0.02,0.15,CM(410),CM(418),DK],
+    [0.82,5.8,0.14,0.14,CM(430),CM(447),KH],[1.24,5.8,0.14,0.14,CM(430),CM(447),KH],
+    [0.5,5.75,0.25,0.18,CM(412),CM(422),KY],[1.45,5.75,0.25,0.18,CM(412),CM(422),KY],
+    [1.0,0.4,0.2,0.2,CM(195),CM(265),KY],[0.95,0.33,0.3,0.3,CM(170),CM(195),KH]]};
+  const kirinHit=[[0.3,0.6,1.6,4.6,0,CM(150),null]];
+  Object.assign(FIX,{dog,dogh,cat,ctw,
+    zouko:sc({...zou,n:'子象',big:0},0.4,null), kirinko:sc({...kirin,n:'子キリン',big:0},0.4,null),
+    zou:{...zou,p:zou.p.concat(zouHit)}, kirin});
+  FIX.zouko.p=FIX.zouko.p.concat(sc({w:0,d:0,p:zouHit},0.4).p);
+  FIX.kirinko.p=FIX.kirinko.p.concat(sc({w:0,d:0,p:kirinHit},0.4).p);
+  FIXCAT.push(['どうぶつ',['dog','dogh','cat','ctw','zouko','kirinko','zou','kirin']]);
+})();
+/* 大きいどうぶつを置ける場所か。上の階の吹き抜けの下か、1階の家の外(上に部屋がない所)だけ */
+function bigOK(f,fi){
+  const g=fixGeom(f), up=plan.floors[fi+1], here=plan.floors[fi];
+  for(let x=f.x+0.1;x<f.x+g.W;x+=0.4) for(let y=f.y+0.1;y<f.y+g.H;y+=0.4){
+    const u=up&&up.rooms.find(r=>inRect(r,x,y));
+    if(u){ if(u.f==='void') continue; return false; }
+    const r=here.rooms.find(q=>inRect(q,x,y));
+    if(r&&r.f!=='veranda') return false;
+    if(!r&&fi!==base()) return false;
+  }
+  return true;
+}
 const FIXS=Object.keys(FIX).map(k=>[k,FIX[k].n]);
 function fixGeom(f){
   const d0=FIX[f.k]||FIX.toilet, d=d0.fn?d0.fn(f):d0; let W=d.w,H=d.d;
@@ -666,7 +747,7 @@ cv.addEventListener('pointerdown',e=>{
       list.push(st); fresh=true;
     }
     const justSel=!fresh&&st!==act; act=st;
-    gest={type:'stair',before,st,fresh,justSel,geom,isS,ox:st.x,oy:st.y,ux,uy,moved:false};
+    gest={type:'stair',before,st,fresh,justSel,geom,isS,ox:st.x,oy:st.y,or:st.r||0,ux,uy,moved:false};
   }else if(tool==='select'){
     let g=null;
     if(sel){
@@ -762,6 +843,10 @@ function endPtr(e){
       g.st.x=clamp(g.st.x,0,GW-sg.W); g.st.y=clamp(g.st.y,0,GH-sg.H);
     }
     if(g.isS && g.fresh && g.st.t!=='ladder' && cur===plan.floors.length-1) toast('上の階がまだありません。左上の「＋階」で足せます');
+    if(!g.isS && (FIX[g.st.k]||{}).big && !bigOK(g.st,cur)){
+      if(g.fresh){ P.fix=P.fix.filter(q=>q!==g.st); act=null; } else { g.st.x=g.ox; g.st.y=g.oy; g.st.r=g.or; }
+      toast(`${FIX[g.st.k].n.replace(/\(.*\)/,'')}は天井につかえるので、1階の庭か、吹き抜けの下に置いてください`);
+    }
     renderOpts();
   }else if(g.type==='tapdel'){
     const fx=hitFix(g.ux,g.uy), st=!fx&&hitStair(g.ux,g.uy), pl=!fx&&!st&&hitPlat(g.ux,g.uy), r=!fx&&!st&&!pl&&roomAt(g.ux,g.uy);
@@ -1153,10 +1238,10 @@ function buildMesh(){
       }
     }
     for(const f of P.fix){
-      const g=fixGeom(f), lit=litRooms.has(roomAt(f.x+g.W/2,f.y+g.H/2));
+      const g=fixGeom(f), lit=litRooms.has(roomAt(f.x+g.W/2,f.y+g.H/2)), bigF=(FIX[f.k]||{}).big&&bigOK(f,fi);
       for(const q of g.parts){
         if(!q.c) continue;
-        const t=Math.min(q.t,wallH<H_WALL?wallH:H_WALL-0.05); if(q.b>=t) continue;   // 天井を突き抜けないようにする
+        const t=bigF?q.t:Math.min(q.t,wallH<H_WALL?wallH:H_WALL-0.05); if(q.b>=t) continue;   // 天井を突き抜けないようにする(庭や吹き抜けの大きいどうぶつは別)
         st.fl=q.e?'|E':(lit?'|L':'');
         const tx=typeof q.c==='string', rgb=tx?[1,1,1]:q.c, n=tx?q.c:'white';
         box(q,q.b,t,rgb,n); rectQ(n,q,t,q.x,q.y,2,[rgb[0],rgb[1],rgb[2],1]);
